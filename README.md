@@ -96,33 +96,18 @@ The head is real geometry: a shell with a rolled edge — its outline a convex p
 
 The flat front and back are plates drawn in their own plane with baked relief: the lip rolling into the screen hole, the rubber gasket, the shadow the lip casts onto the glass, screws, and vents on the back. The glass sits a little behind the bezel, so it slides against it as the head turns. The LED matrix covers the whole screen, the face centred on it; the LEDs are drawn crisp, then bloomed from a one-pixel-per-LED image scaled up smooth. The antenna is a damped spring that whips when the head hops, lands or tilts, topped with a frosted bulb lit from inside.
 
-## Hermes dashboard
+## Awady AI office (Hermes)
 
-`hermes/` is a small dashboard that gives each of your [Hermes Agent](https://github.com/NousResearch/hermes-agent) bots a head, driven live by the gateway's [Runs API](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md).
+`hermes/` is a mobile-first office for [Hermes Agent](https://github.com/NousResearch/hermes-agent) bots: every bot sits at a desk as a robot head that shows what it is doing, grouped by section. Tap a bot to see its tasks (working on now, up next, done), its activity log and its chat, and to write to it.
 
-1. In each bot's `~/.hermes/.env` (or `~/.hermes/profiles/<profile>/.env`):
+```bash
+pnpm install
+pnpm run hermes   # http://localhost:5174
+```
 
-   ```bash
-   API_SERVER_ENABLED=true
-   API_SERVER_KEY=your-secret
-   API_SERVER_CORS_ORIGINS=http://localhost:5174
-   ```
+It runs on sample data for now (`hermes/src/data/mock.ts`, with a small simulation in `store.ts`), so the GUI can be reviewed before it is linked to the bridge on the PC. The GUI only reads the store's hooks and calls its actions, so linking means replacing the store's data source, not the screens. It is built to load inside the Awady AI Android app's WebView: it opens `#bot/<id>` links from notifications, answers `window.hermesBack()` and calls `HermesApp.setActiveBot` / `markRead` when they exist.
 
-2. Start the gateway: `hermes gateway` (listens on `http://127.0.0.1:8642`).
-3. `pnpm install && pnpm run hermes`, open http://localhost:5174 and add a bot with its URL and key. For a named profile on a multiplexed gateway use `http://127.0.0.1:8642/p/<profile>`.
-
-| Hermes event | Head |
-|---|---|
-| run started, `reasoning.available`, `tool.completed` | `thinking` |
-| `tool.started` for search, web, browser, memory tools | `searching` |
-| `tool.started` for any other tool, `subagent.start` | `working` |
-| `message.delta` | `speaking` |
-| `approval.request` (approve or deny from the card) | `listening` |
-| `run.completed` | `happy`, then `idle` |
-| `run.failed` | `error`, then `idle` |
-| `/health` unreachable | `sleeping` |
-
-The heads follow the runs started from the dashboard; turns that come in on Telegram, Discord or the CLI do not go through the Runs API. Bots and keys are kept in the browser's localStorage.
+`hermes/src/hermes.ts` keeps a client for the Hermes API server's Runs API and the event-to-state mapping for that step.
 
 ## Development
 
@@ -141,7 +126,7 @@ src/            the library
   RobotHead.tsx   the component
   tv/             the TV head: geometry, lighting, faces, motion, renderer
 site/           the playground (Vite + Cloudflare Worker)
-hermes/         the Hermes Agent dashboard
+hermes/         the Awady AI office for Hermes bots
 ```
 
 ## License
