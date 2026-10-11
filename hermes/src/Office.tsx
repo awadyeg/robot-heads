@@ -3,6 +3,7 @@ import { Desk } from './Desk';
 import { folders, sections, useBots } from './data/store';
 import type { Bot } from './data/types';
 import { BUSY, matches, type Filter } from './ui';
+import { native } from './native';
 
 const COLLAPSED_KEY = 'awady-office-collapsed';
 
@@ -29,6 +30,7 @@ export function Office({ onOpen }: { onOpen: (id: string) => void }) {
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [collapsed, setCollapsed] = useState<string[]>(loadCollapsed);
+  const [settings, setSettings] = useState(false);
 
   const counts = useMemo(
     () => ({
@@ -58,7 +60,9 @@ export function Office({ onOpen }: { onOpen: (id: string) => void }) {
   return (
     <div className="office">
       <header className="bar">
-        <span className="me" aria-label="You">A</span>
+        <button className="me" aria-label="Settings" onClick={() => setSettings(true)}>
+          A
+        </button>
         {searching ? (
           <input
             className="search"
@@ -141,6 +145,30 @@ export function Office({ onOpen }: { onOpen: (id: string) => void }) {
           ))}
         </section>
       )}
+
+      {settings && <Settings onClose={() => setSettings(false)} />}
+    </div>
+  );
+}
+
+function Settings({ onClose }: { onClose: () => void }) {
+  const version = native.appVersion();
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-label="Settings" onClick={(e) => e.stopPropagation()}>
+        <span className="grab" />
+        <h2>Awady Office</h2>
+        <div className="setting">
+          <span>Version</span>
+          <span className="value">{version ?? 'Web preview'}</span>
+        </div>
+        {native.canUpdate() && (
+          <button className="primary" onClick={() => native.checkForUpdate()}>
+            Check for updates
+          </button>
+        )}
+        <p className="hint">Sample data for now. The bots go live once the office is linked to the bridge on your PC.</p>
+      </div>
     </div>
   );
 }

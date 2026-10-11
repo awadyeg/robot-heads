@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<resources package="com.awady.office" id="0x7f">
+  <public id="0x7f010000" type="color" name="ic_bg" />
+  <public id="0x7f020000" type="mipmap" name="ic_launcher" />
+  <public id="0x7f020001" type="mipmap" name="ic_launcher_foreground" />
+</resources>

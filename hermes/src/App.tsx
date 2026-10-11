@@ -52,6 +52,12 @@ export default function App() {
   /* the Android back button: close the bot page before leaving the app */
   useEffect(() => {
     window.hermesBack = () => {
+      // an open sheet closes first
+      const scrim = document.querySelector<HTMLElement>('.scrim');
+      if (scrim) {
+        scrim.click();
+        return true;
+      }
       if (!botFromHash()) return false;
       back();
       return true;

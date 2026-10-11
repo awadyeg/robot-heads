@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react()],
   server: { port: 5174 },
   preview: { port: 5174 },
+  // the Android app's WebView can be older than a desktop browser
+  build: { target: ['es2020', 'chrome80'] },
   resolve: {
     alias: { 'robot-heads': fileURLToPath(new URL('../src/index.ts', import.meta.url)) },
     dedupe: ['react', 'react-dom'],

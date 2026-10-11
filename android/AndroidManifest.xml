@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<manifest android:versionCode="@VERSION_CODE@"
+          android:versionName="@VERSION_NAME@"
+          android:compileSdkVersion="34"
+          android:compileSdkVersionCodename="14"
+          package="com.awady.office"
+          platformBuildVersionCode="34"
+          platformBuildVersionName="14" xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-sdk android:minSdkVersion="24"
+            android:targetSdkVersion="34" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+  <application android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+               android:label="Awady Office"
+               android:icon="@mipmap/ic_launcher"
+               android:allowBackup="false"
+               android:extractNativeLibs="false">
+    <activity android:name="com.awady.office.MainActivity"
+              android:exported="true"
+              android:launchMode="singleTask"
+              android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|uiMode"
+              android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="awadyoffice" android:host="open" />
+      </intent-filter>
+    </activity>
+    <receiver android:name="com.awady.office.InstallReceiver"
+              android:exported="false" />
+  </application>
+</manifest>

@@ -8,6 +8,8 @@ interface HermesAppBridge {
   setActiveBot?(id: string): void;
   markRead?(id: string): void;
   unreadJson?(): string;
+  appVersion?(): string;
+  checkForUpdate?(): void;
 }
 
 declare global {
@@ -29,4 +31,14 @@ function call(fn: (app: HermesAppBridge) => void) {
 export const native = {
   setActiveBot: (id: string | null) => call((a) => a.setActiveBot?.(id ?? '')),
   markRead: (id: string) => call((a) => a.markRead?.(id)),
+  /** "1.0.0 (1)" inside the Android app, null in a browser */
+  appVersion(): string | null {
+    try {
+      return window.HermesApp?.appVersion?.() ?? null;
+    } catch {
+      return null;
+    }
+  },
+  canUpdate: () => typeof window.HermesApp?.checkForUpdate === 'function',
+  checkForUpdate: () => call((a) => a.checkForUpdate?.()),
 };
