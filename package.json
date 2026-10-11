@@ -52,6 +52,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "pnpm --filter robot-heads-site run dev",
+    "hermes": "pnpm --filter robot-heads-hermes run dev",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "deploy": "pnpm --filter robot-heads-site run deploy",
