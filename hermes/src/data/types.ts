@@ -65,4 +65,15 @@ export interface Bot {
   tasks: Task[];
   log: Activity[];
   chat: Message[];
+  /** a pending approval the bot is waiting on (live only) */
+  approval?: Approval | null;
+  /** why the server could not read this bot (live only) */
+  error?: string;
+}
+
+export interface Approval {
+  entryId: string;
+  requestId: string;
+  summary: string;
+  command: string;
 }

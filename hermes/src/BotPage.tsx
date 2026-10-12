@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { RobotHead } from 'robot-heads';
-import { sendMessage, useBot } from './data/store';
+import { answerApproval, sendMessage, useBot, watchBot } from './data/store';
 import type { Activity, Bot, Task } from './data/types';
 import { BUSY, STATE_LABEL, clock, when } from './ui';
 
@@ -9,6 +9,7 @@ type Tab = 'tasks' | 'activity' | 'chat';
 export function BotPage({ id, onBack }: { id: string; onBack: () => void }) {
   const bot = useBot(id);
   const [tab, setTab] = useState<Tab>(() => (bot?.state === 'listening' ? 'chat' : 'tasks'));
+  useEffect(() => watchBot(id), [id]);
   if (!bot) {
     return (
       <div className="page">
@@ -73,6 +74,8 @@ export function BotPage({ id, onBack }: { id: string; onBack: () => void }) {
         ))}
       </nav>
 
+      {bot.approval && <ApprovalCard bot={bot} />}
+      {bot.error && <p className="form-error">{bot.error}</p>}
       {tab === 'tasks' && <Tasks bot={bot} onChat={() => setTab('chat')} />}
       {tab === 'activity' && <ActivityLog log={bot.log} />}
       {tab === 'chat' && <Chat bot={bot} />}
@@ -110,7 +113,7 @@ function Tasks({ bot, onChat }: { bot: Bot; onChat: () => void }) {
   const done = bot.tasks.filter((t) => t.status === 'done').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
   return (
     <div className="panel">
-      {bot.state === 'listening' && (
+      {bot.state === 'listening' && !bot.approval && (
         <button className="waiting-card" onClick={onChat}>
           <strong>Needs you</strong>
           <span dir="auto">{bot.activity.replace(/^Waiting for you:\s*/, '')}</span>
@@ -120,7 +123,42 @@ function Tasks({ bot, onChat }: { bot: Bot; onChat: () => void }) {
       <TaskList title="Working on now" tasks={doing} kind="doing" />
       <TaskList title="Up next" tasks={next} kind="next" />
       <TaskList title="Done" tasks={done} kind="done" />
-      {bot.tasks.length === 0 && <p className="empty">No tasks yet. Give it one from the chat.</p>}
+      {bot.tasks.length === 0 && (
+        <p className="empty">No task list yet. Bots that keep a to-do list show it here; give it one from the chat.</p>
+      )}
+    </div>
+  );
+}
+
+function ApprovalCard({ bot }: { bot: Bot }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const a = bot.approval!;
+  async function decide(d: 'accept' | 'decline') {
+    setBusy(true);
+    setError('');
+    try {
+      await answerApproval(bot.id, d);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="waiting-card approval">
+      <strong>Needs your approval</strong>
+      {a.summary && <span dir="auto">{a.summary}</span>}
+      {a.command && <code dir="ltr">{a.command}</code>}
+      {error && <span className="form-error">{error}</span>}
+      <div className="row">
+        <button className="primary" disabled={busy} onClick={() => decide('accept')}>
+          Approve once
+        </button>
+        <button className="ghost-btn" disabled={busy} onClick={() => decide('decline')}>
+          Decline
+        </button>
+      </div>
     </div>
   );
 }

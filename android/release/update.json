@@ -1,6 +1,6 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0.0",
-  "notes": "First version: the office, bot pages (tasks, activity, chat) and in-app updates.",
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "notes": "Connects to your Grok Bot bots through your server: live states, tasks, chat, and approve or decline from the app. Tap A → Grok Bot server to connect.",
   "apk": "AwadyOffice.apk"
 }

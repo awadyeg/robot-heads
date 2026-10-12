@@ -1,0 +1,13 @@
+{
+  "leads": ["General Manager", "Sara Eng Team"],
+  "sections": [
+    { "name": "Sara Engineering", "bots": ["Technical Expert", "Invoicing", "Email", "Whatsapp Projects Tracker", "Drawings", "Recruiter", "Document Controller", "Graphics", "Marketing"] },
+    { "name": "Software", "bots": ["Home Assistant Developer", "ESP32 Developer", "Software Team Leader", "Mobile App Developer", "AwadyPM2", "VDrive", "Flosyfeen", "BuildingAI3", "Darwish Store"] },
+    { "name": "Personal", "bots": ["Doctor", "Money Tracker", "مسلسلات وافلام", "Menna's Doctor", "Freelancer", "Family & Friends", "Subscriptions tracker", "Nutritionist"] },
+    { "name": "Branding", "bots": ["Courses", "Linkedin Master", "Sales", "Networking", "PMP Instructor", "Personal Branding Training"] },
+    { "name": "Hobbies", "bots": ["Video Editor", "Piano Teacher"] }
+  ],
+  "unassignedName": "Unassigned",
+  "showGroups": false,
+  "folders": []
+}

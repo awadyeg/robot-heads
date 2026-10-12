@@ -1,14 +1,24 @@
 import { useSyncExternalStore } from 'react';
 import type { RobotHeadState } from 'robot-heads';
-import { folders, sections, seedBots } from './mock';
-import type { Activity, Bot, Message, Task } from './types';
+import { folders as demoFolders, sections as demoSections, seedBots } from './mock';
+import { api, loadConfig, saveConfig, type ServerConfig } from './live';
+import type { Activity, Bot, Folder, Message, Section, Task } from './types';
 
-/* The office's state. Today it is seeded with sample data and a small
-   simulation so the heads have something to do; linking to the bridge will
-   replace `seedBots` and the simulation with the bridge's API and events,
-   keeping the same actions for the GUI. */
+/* The office's state. Without a server it runs on sample data and a small
+   simulation (demo); once connected to the Awady Office server it shows the
+   real Grok Bot bots, polled from the server. The GUI uses the same hooks and
+   actions either way. */
 
 let bots: Bot[] = seedBots();
+let layout: { sections: Section[]; folders: Folder[] } = { sections: demoSections, folders: demoFolders };
+export interface Connection {
+  mode: 'demo' | 'live';
+  url?: string;
+  error?: string;
+  updatedAt?: number;
+}
+let config: ServerConfig | null = loadConfig();
+let connection: Connection = config ? { mode: 'live', url: config.url } : { mode: 'demo' };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -45,11 +55,18 @@ export function useBot(id: string | null) {
   return id ? all.find((b) => b.id === id) ?? null : null;
 }
 
-export { sections, folders };
+export function useLayout() {
+  return useSyncExternalStore(subscribe, () => layout);
+}
+
+export function useConnection() {
+  return useSyncExternalStore(subscribe, () => connection);
+}
 
 export function markRead(id: string) {
   const b = bots.find((x) => x.id === id);
   if (b && b.unread) update(id, (x) => ({ ...x, unread: 0 }));
+  if (config) api(config, `/api/bots/${encodeURIComponent(id)}/read`, { method: 'POST', body: {} }).catch(() => {});
 }
 
 function setState(id: string, state: RobotHeadState, activity: string) {
@@ -71,8 +88,13 @@ function settle(id: string, after: number) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Send a message and play out a mock run: think, use a tool, reply, finish. */
 export async function sendMessage(id: string, text: string) {
+  if (config) return liveSend(config, id, text);
+  return demoSend(id, text);
+}
+
+/** Demo: play out a mock run: think, use a tool, reply, finish. */
+async function demoSend(id: string, text: string) {
   const wasWaiting = bots.find((b) => b.id === id)?.state === 'listening';
   update(id, (b) => {
     let next = addMessage(b, { role: 'user', text });
@@ -140,6 +162,7 @@ for (const b of bots) if (b.state in AMBIENT_TOOLS) busy.add(b.id);
 const ambientTicks = new Map<string, number>();
 
 function ambientTick() {
+  if (connection.mode !== 'demo') return;
   for (const id of busy) {
     const b = bots.find((x) => x.id === id);
     if (!b || b.state === 'speaking' || b.state === 'happy' || b.state === 'listening') continue;
@@ -188,3 +211,122 @@ export function startAmbient() {
     ambient = undefined;
   };
 }
+
+/* ── live: the Awady Office server ── */
+
+interface OfficeResponse {
+  sections: Section[];
+  folders: Folder[];
+  bots: Array<Omit<Bot, 'chat' | 'log'> & Partial<Pick<Bot, 'chat' | 'log'>>>;
+  updatedAt: number;
+  error?: string;
+}
+
+function setConnection(next: Connection) {
+  connection = next;
+  emit();
+}
+
+async function pollOffice() {
+  if (!config) return;
+  const c = config;
+  try {
+    const data = await api<OfficeResponse>(c, '/api/office');
+    if (config !== c) return;
+    const prev = new Map(bots.map((b) => [b.id, b]));
+    bots = data.bots.map((b) => {
+      const old = prev.get(b.id);
+      return { ...b, chat: old?.chat ?? [], log: old?.log ?? [], tasks: b.tasks ?? [] } as Bot;
+    });
+    layout = { sections: data.sections, folders: data.folders ?? [] };
+    connection = { mode: 'live', url: c.url, updatedAt: Date.now(), error: data.error };
+    emit();
+  } catch (e) {
+    if (config === c) setConnection({ ...connection, error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+async function pollBot(id: string) {
+  if (!config) return;
+  const c = config;
+  try {
+    const full = await api<Bot>(c, `/api/bots/${encodeURIComponent(id)}`);
+    if (config !== c) return;
+    update(id, (b) => ({ ...b, ...full, sectionId: b.sectionId, lead: b.lead }));
+  } catch {
+    /* the office poll reports connection errors */
+  }
+}
+
+let officeTimer: number | undefined;
+function startLive() {
+  clearInterval(officeTimer);
+  bots = [];
+  layout = { sections: [], folders: [] };
+  emit();
+  pollOffice();
+  officeTimer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') pollOffice();
+  }, 5000);
+}
+
+/** While a bot's page is open, keep its chat and activity fresh. */
+export function watchBot(id: string) {
+  if (!config) return () => {};
+  pollBot(id);
+  const timer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') pollBot(id);
+  }, 3000);
+  return () => clearInterval(timer);
+}
+
+async function liveSend(c: ServerConfig, id: string, text: string) {
+  update(id, (b) => ({
+    ...addMessage(b, { role: 'user', text }),
+    state: 'thinking',
+    activity: 'Sending…',
+  }));
+  try {
+    await api(c, `/api/bots/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { text }, timeout: 130_000 });
+    pollBot(id);
+  } catch (e) {
+    update(id, (b) => ({
+      ...addMessage(b, { role: 'peer', from: 'Not sent', text: e instanceof Error ? e.message : String(e) }),
+      state: 'error',
+      activity: 'Message not sent',
+    }));
+  }
+}
+
+export async function answerApproval(id: string, decision: 'accept' | 'decline') {
+  const b = bots.find((x) => x.id === id);
+  if (!config || !b?.approval) return;
+  await api(config, `/api/bots/${encodeURIComponent(id)}/approvals`, {
+    method: 'POST',
+    body: { entryId: b.approval.entryId, requestId: b.approval.requestId, decision },
+    timeout: 60_000,
+  });
+  update(id, (x) => ({ ...x, approval: null, state: 'thinking', activity: decision === 'accept' ? 'Approved' : 'Declined' }));
+  pollBot(id);
+}
+
+/** Connect to a server: checks it answers with the token, then switches to live. */
+export async function connect(c: ServerConfig) {
+  await api<OfficeResponse>(c, '/api/office');
+  config = c;
+  saveConfig(c);
+  connection = { mode: 'live', url: c.url };
+  startLive();
+}
+
+export function disconnect() {
+  config = null;
+  saveConfig(null);
+  clearInterval(officeTimer);
+  bots = seedBots();
+  layout = { sections: demoSections, folders: demoFolders };
+  connection = { mode: 'demo' };
+  emit();
+}
+
+if (config) startLive();

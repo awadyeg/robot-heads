@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Desk } from './Desk';
-import { folders, sections, useBots } from './data/store';
+import { connect, disconnect, useBots, useConnection, useLayout } from './data/store';
+import { normalizeUrl } from './data/live';
 import type { Bot } from './data/types';
 import { BUSY, matches, type Filter } from './ui';
 import { native } from './native';
@@ -26,6 +27,8 @@ const seedOf = (id: string) => (Array.from(id).reduce((a, c) => a + c.charCodeAt
 
 export function Office({ onOpen }: { onOpen: (id: string) => void }) {
   const bots = useBots();
+  const { sections, folders } = useLayout();
+  const conn = useConnection();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -97,6 +100,13 @@ export function Office({ onOpen }: { onOpen: (id: string) => void }) {
         ))}
       </nav>
 
+      {conn.mode === 'live' && conn.error && (
+        <button className="banner" onClick={() => setSettings(true)}>
+          <strong>Can't reach the server.</strong> {conn.error}
+        </button>
+      )}
+      {conn.mode === 'live' && bots.length === 0 && !conn.error && <p className="empty">Loading your bots…</p>}
+
       {leads.length > 0 && (
         <section className="leads">
           {leads.map((b) => (
@@ -153,21 +163,66 @@ export function Office({ onOpen }: { onOpen: (id: string) => void }) {
 
 function Settings({ onClose }: { onClose: () => void }) {
   const version = native.appVersion();
+  const conn = useConnection();
+  const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await connect({ url: normalizeUrl(url), token: token.trim() });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="scrim" onClick={onClose}>
       <div className="sheet" role="dialog" aria-label="Settings" onClick={(e) => e.stopPropagation()}>
         <span className="grab" />
         <h2>Awady Office</h2>
+
+        <h3 className="sheet-h">Grok Bot server</h3>
+        {conn.mode === 'live' ? (
+          <>
+            <div className="setting">
+              <span>Connected to</span>
+              <span className="value">{conn.url?.replace(/^https?:\/\//, '')}</span>
+            </div>
+            {conn.error && <p className="form-error">{conn.error}</p>}
+            <button className="ghost-btn" onClick={() => { disconnect(); onClose(); }}>
+              Disconnect (back to sample data)
+            </button>
+          </>
+        ) : (
+          <form className="connect" onSubmit={submit}>
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Server address, e.g. https://vps.your-tailnet.ts.net" inputMode="url" autoCapitalize="off" autoCorrect="off" />
+            <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="Token" type="password" autoCapitalize="off" />
+            {error && <p className="form-error">{error}</p>}
+            <button className="primary" disabled={busy || !url.trim() || !token.trim()}>
+              {busy ? 'Connecting…' : 'Connect'}
+            </button>
+          </form>
+        )}
+
+        <h3 className="sheet-h">App</h3>
         <div className="setting">
           <span>Version</span>
           <span className="value">{version ?? 'Web preview'}</span>
         </div>
         {native.canUpdate() && (
-          <button className="primary" onClick={() => native.checkForUpdate()}>
+          <button className="ghost-btn" onClick={() => native.checkForUpdate()}>
             Check for updates
           </button>
         )}
-        <p className="hint">Sample data for now. The bots go live once the office is linked to the bridge on your PC.</p>
+        {conn.mode === 'demo' && <p className="hint">Showing sample data until you connect to your server.</p>}
       </div>
     </div>
   );

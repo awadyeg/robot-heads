@@ -199,3 +199,17 @@ input { font: inherit; color: inherit; }
 .setting .value { color: var(--soft); }
 .primary { padding: 13px; border-radius: 14px; background: var(--accent); color: #fff; font-weight: 600; text-align: center; }
 .hint { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* ── server connection ── */
+.sheet-h { margin: 6px 0 -4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.connect { display: grid; gap: 10px; }
+.connect input { padding: 12px 14px; border-radius: 12px; background: var(--fill); border: 1px solid var(--line); outline: none; min-width: 0; }
+.connect input:focus { border-color: var(--accent); }
+.primary:disabled { opacity: 0.45; }
+.ghost-btn { padding: 12px; border-radius: 14px; background: var(--fill); font-weight: 600; text-align: center; }
+.form-error { margin: 0; color: var(--bad); font-size: 13px; overflow-wrap: anywhere; }
+.banner { display: block; width: 100%; margin: 4px 0 8px; padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--text); font-size: 13px; }
+.approval { margin: 10px 0 0; }
+.approval code { font: 12px var(--mono); background: var(--fill); padding: 6px 8px; border-radius: 8px; overflow-wrap: anywhere; }
+.approval .row { display: flex; gap: 8px; margin-top: 6px; }
+.approval .row button { flex: 1; padding: 10px; }

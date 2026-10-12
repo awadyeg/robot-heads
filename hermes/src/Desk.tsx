@@ -22,7 +22,7 @@ export function Desk({ bot, seed, onOpen, big }: { bot: Bot; seed: number; onOpe
   const doing = bot.tasks.filter((t) => t.status === 'doing').length;
   const done = bot.tasks.filter((t) => t.status === 'done').length;
   const total = bot.tasks.length;
-  const line = bot.activity || (bot.state === 'sleeping' ? 'Nothing new in a while' : bot.lastMessage);
+  const line = bot.activity.replace(/^Waiting for you:\s*/, '') || (bot.state === 'sleeping' ? 'Nothing new in a while' : bot.lastMessage);
 
   return (
     <button ref={ref} className={`desk s-${bot.state} ${big ? 'big' : ''}`} onClick={onOpen}>
